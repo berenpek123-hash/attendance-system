@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const API_BASE = 'http://localhost:3000/api'
+// 自动检测环境：本地开发用 localhost:3000，云端用相同域名
+const API_BASE = process.env.NODE_ENV === 'production' 
+  ? '/api' 
+  : 'http://localhost:3000/api'
 
 const api = axios.create({
   baseURL: API_BASE,

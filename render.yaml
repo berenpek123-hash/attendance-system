@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: attendance-backend
+    runtime: node
+    buildCommand: "cd backend && npm install"
+    startCommand: "cd backend && node server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+  - type: static
+    name: attendance-frontend
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: frontend/dist
+    routes:
+      - path: /api
+        destination: https://attendance-backend.onrender.com
