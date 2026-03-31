@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-// 自动检测环境：本地开发用 localhost:3000，云端用相同域名
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? '/api' 
+// 自动检测环境：本地开发用 localhost:3000，云端用 Render 后端
+const API_BASE = import.meta.env.PROD
+  ? 'https://attendance-system-ngtj.onrender.com/api' 
   : 'http://localhost:3000/api'
 
 const api = axios.create({
