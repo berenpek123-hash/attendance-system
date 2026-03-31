@@ -115,7 +115,7 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { getEmployees, addEmployee, updateEmployee, getShops } from '../api'
+import { getEmployees, addEmployee as apiAddEmployee, updateEmployee as apiUpdateEmployee, getShops } from '../api'
 
 export default {
   name: 'EmployeeManagement',
@@ -173,7 +173,7 @@ export default {
       }
 
       try {
-        await addEmployee({
+        await apiAddEmployee({
           name: newEmployee.value.name,
           employee_number: newEmployee.value.employee_number,
           shop_id: parseInt(newEmployee.value.shop_id),
@@ -201,9 +201,17 @@ export default {
     const deactivateEmployee = async (id) => {
       if (confirm('确定要将该员工设为离职状态吗？')) {
         try {
-          await updateEmployee(id, { status: 'inactive' })
-          alert('员工已设为离职')
-          loadEmployees()
+          // 获取员工信息后更新
+          const emp = employees.value.find(e => e.id === id)
+          if (emp) {
+            await apiUpdateEmployee(id, { 
+              name: emp.name,
+              phone: emp.phone,
+              status: 'inactive' 
+            })
+            alert('员工已设为离职')
+            loadEmployees()
+          }
         } catch (error) {
           alert('操作失败: ' + error.message)
         }
