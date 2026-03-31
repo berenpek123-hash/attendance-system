@@ -94,27 +94,42 @@ router.post('/', (req, res) => {
   }
 });
 
-// 更新员工
+// 更新员工（支持部分更新）
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
     const { name, phone, status } = req.body;
 
-    db.run(
-      'UPDATE employees SET name = ?, phone = ?, status = ? WHERE id = ?',
-      [name, phone, status, id],
-      (err) => {
-        if (err) {
-          console.error('更新员工错误:', err);
-          return res.status(500).json({ error: '更新员工失败' });
-        }
-
-        res.json({
-          success: true,
-          message: '员工更新成功'
-        });
+    // 先查询当前员工数据，然后合并更新
+    db.get('SELECT * FROM employees WHERE id = ?', [id], (err, employee) => {
+      if (err) {
+        console.error('查询员工错误:', err);
+        return res.status(500).json({ error: '更新员工失败' });
       }
-    );
+      if (!employee) {
+        return res.status(404).json({ error: '员工不存在' });
+      }
+
+      const updatedName = name !== undefined ? name : employee.name;
+      const updatedPhone = phone !== undefined ? phone : employee.phone;
+      const updatedStatus = status !== undefined ? status : employee.status;
+
+      db.run(
+        'UPDATE employees SET name = ?, phone = ?, status = ? WHERE id = ?',
+        [updatedName, updatedPhone, updatedStatus, id],
+        (err2) => {
+          if (err2) {
+            console.error('更新员工错误:', err2);
+            return res.status(500).json({ error: '更新员工失败' });
+          }
+
+          res.json({
+            success: true,
+            message: '员工更新成功'
+          });
+        }
+      );
+    });
 
   } catch (error) {
     console.error('更新员工错误:', error);
