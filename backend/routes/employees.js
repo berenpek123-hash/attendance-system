@@ -137,4 +137,33 @@ router.put('/:id', (req, res) => {
   }
 });
 
+// 删除员工
+router.delete('/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 先删除该员工的打卡记录
+    db.run('DELETE FROM attendance_records WHERE employee_id = ?', [id], (err) => {
+      if (err) {
+        console.error('删除打卡记录错误:', err);
+        return res.status(500).json({ error: '删除失败' });
+      }
+
+      db.run('DELETE FROM employees WHERE id = ?', [id], function (err2) {
+        if (err2) {
+          console.error('删除员工错误:', err2);
+          return res.status(500).json({ error: '删除失败' });
+        }
+        if (this.changes === 0) {
+          return res.status(404).json({ error: '员工不存在' });
+        }
+        res.json({ success: true, message: '员工已删除' });
+      });
+    });
+  } catch (error) {
+    console.error('删除员工错误:', error);
+    res.status(500).json({ error: '删除失败' });
+  }
+});
+
 module.exports = router;

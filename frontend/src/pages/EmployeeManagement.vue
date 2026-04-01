@@ -90,6 +90,7 @@
               <td>
                 <button @click="generateQRCode(emp)" class="btn-sm btn-primary">二维码</button>
                 <button v-if="emp.status === 'active'" @click="deactivateEmployee(emp.id)" class="btn-sm btn-danger">离职</button>
+                <button @click="deleteEmployee(emp.id)" class="btn-sm btn-delete">删除</button>
               </td>
             </tr>
           </tbody>
@@ -115,7 +116,7 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { getEmployees, addEmployee as apiAddEmployee, updateEmployee as apiUpdateEmployee, getShops } from '../api'
+import { getEmployees, addEmployee as apiAddEmployee, updateEmployee as apiUpdateEmployee, deleteEmployee as apiDeleteEmployee, getShops } from '../api'
 
 export default {
   name: 'EmployeeManagement',
@@ -218,6 +219,21 @@ export default {
       }
     }
 
+    const deleteEmployee = async (id) => {
+      const emp = employees.value.find(e => e.id === id)
+      if (!emp) return
+
+      if (confirm(`确定要永久删除员工 "${emp.name}" 吗？\n该员工的所有打卡记录也将被删除，此操作无法恢复！`)) {
+        try {
+          await apiDeleteEmployee(id)
+          alert('员工已删除')
+          loadEmployees()
+        } catch (error) {
+          alert('删除失败: ' + (error.response?.data?.error || error.message))
+        }
+      }
+    }
+
     const generateQRCode = async (emp) => {
       qrModalEmployee.value = emp
       
@@ -261,6 +277,7 @@ export default {
       filterEmployees,
       addEmployee,
       deactivateEmployee,
+      deleteEmployee,
       generateQRCode
     }
   }
@@ -339,6 +356,15 @@ h2 {
 }
 
 .btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
   background: #c82333;
 }
 

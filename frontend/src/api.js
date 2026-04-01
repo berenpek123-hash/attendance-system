@@ -37,6 +37,10 @@ export const updateEmployee = (id, data) => {
   return api.put(`/employees/${id}`, data)
 }
 
+export const deleteEmployee = (id) => {
+  return api.delete(`/employees/${id}`)
+}
+
 // 店铺相关
 export const getShops = () => {
   return api.get('/shops')
