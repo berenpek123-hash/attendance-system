@@ -9,6 +9,7 @@
           <li><router-link to="/daily-report" :class="{ active: $route.path === '/daily-report' }">日报</router-link></li>
           <li><router-link to="/monthly-report" :class="{ active: $route.path === '/monthly-report' }">月报</router-link></li>
           <li><router-link to="/work-hours" :class="{ active: $route.path === '/work-hours' }">工作时长</router-link></li>
+          <li><router-link to="/shops" :class="{ active: $route.path === '/shops' }">店铺管理</router-link></li>
           <li><router-link to="/employees" :class="{ active: $route.path === '/employees' }">员工管理</router-link></li>
         </ul>
       </div>

@@ -5,6 +5,7 @@ import DailyReport from './pages/DailyReport.vue'
 import MonthlyReport from './pages/MonthlyReport.vue'
 import EmployeeManagement from './pages/EmployeeManagement.vue'
 import WorkHoursReport from './pages/WorkHoursReport.vue'
+import ShopManagement from './pages/ShopManagement.vue'
 
 const routes = [
   { path: '/', component: Dashboard, meta: { title: '仪表盘' } },
@@ -12,6 +13,7 @@ const routes = [
   { path: '/daily-report', component: DailyReport, meta: { title: '日报' } },
   { path: '/monthly-report', component: MonthlyReport, meta: { title: '月报' } },
   { path: '/work-hours', component: WorkHoursReport, meta: { title: '工作时长' } },
+  { path: '/shops', component: ShopManagement, meta: { title: '店铺管理' } },
   { path: '/employees', component: EmployeeManagement, meta: { title: '员工管理' } }
 ]
 
