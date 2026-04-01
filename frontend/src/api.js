@@ -3,8 +3,8 @@ import axios from 'axios'
 // 自动检测环境
 const getAPIBase = () => {
   if (import.meta.env.PROD) {
-    // 生产环境：使用当前页面的主机名
-    return `${window.location.protocol}//${window.location.hostname}:3000/api`
+    // 生产环境：使用 Render 后端 URL
+    return 'https://attendance-system-backend-dmgp.onrender.com/api'
   } else {
     // 开发环境：使用本地代理
     return '/api'
