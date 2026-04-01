@@ -5,10 +5,11 @@
     <div class="controls">
       <div class="control-group">
         <label>选择店铺：</label>
-        <select v-model="selectedShop">
+        <select v-model="selectedShop" @change="fetchData">
           <option value="">全部店铺</option>
-          <option value="1">南京店</option>
-          <option value="2">北京店</option>
+          <option v-for="shop in shops" :key="shop.id" :value="shop.id">
+            {{ shop.name }}
+          </option>
         </select>
       </div>
 
@@ -127,7 +128,7 @@
 
 <script>
 import { ref, onMounted } from 'vue';
-import { getTodayWorkHours, getMonthlyWorkHours } from '../api';
+import { getTodayWorkHours, getMonthlyWorkHours, getShops } from '../api';
 import moment from 'moment';
 
 export default {
@@ -139,6 +140,16 @@ export default {
     const monthlyStats = ref([]);
     const selectedEmployee = ref(null);
     const loading = ref(false);
+    const shops = ref([]);
+
+    const loadShops = async () => {
+      try {
+        const res = await getShops();
+        shops.value = res.data || [];
+      } catch (error) {
+        console.error('获取店铺列表失败:', error);
+      }
+    };
 
     const fetchData = async () => {
       loading.value = true;
@@ -183,6 +194,7 @@ export default {
     };
 
     onMounted(() => {
+      loadShops();
       fetchData();
     });
 
@@ -193,6 +205,7 @@ export default {
       monthlyStats,
       selectedEmployee,
       loading,
+      shops,
       fetchData,
       exportExcel
     };
