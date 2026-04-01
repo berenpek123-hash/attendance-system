@@ -66,7 +66,7 @@
         <table class="table" v-if="filteredEmployees.length > 0">
           <thead>
             <tr>
-              <th>员工ID</th>
+              <th>序号</th>
               <th>员工姓名</th>
               <th>员工号</th>
               <th>店铺</th>
@@ -76,8 +76,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="emp in filteredEmployees" :key="emp.id">
-              <td>{{ emp.id }}</td>
+            <tr v-for="(emp, index) in filteredEmployees" :key="emp.id">
+              <td>{{ index + 1 }}</td>
               <td>{{ emp.name }}</td>
               <td>{{ emp.employee_number }}</td>
               <td>{{ emp.shop_name }}</td>
