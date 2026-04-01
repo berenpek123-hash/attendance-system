@@ -58,8 +58,11 @@
       <p v-else class="no-data">暂无店铺数据</p>
     </div>
 
+    <!-- 提示消息 -->
+    <div v-if="toast" class="toast" :class="toast.type">{{ toast.message }}</div>
+
     <!-- 编辑店铺模态框 -->
-    <div v-if="editingShop" class="modal-overlay" @click.self="editingShop = null">
+    <div v-if="editingShop" class="modal-overlay">
       <div class="modal-content">
         <h3>编辑店铺</h3>
         <form @submit.prevent="updateShop">
@@ -81,7 +84,7 @@
             >
           </div>
           <div class="form-actions">
-            <button type="submit" class="btn-success">保存修改</button>
+            <button type="submit" class="btn-success" :disabled="saving">{{ saving ? '保存中...' : '保存修改' }}</button>
             <button type="button" @click="editingShop = null" class="btn-cancel">取消</button>
           </div>
           <p v-if="editError" class="error-message">{{ editError }}</p>
@@ -102,8 +105,10 @@ export default {
     const showAddForm = ref(false);
     const editingShop = ref(null);
     const loading = ref(false);
+    const saving = ref(false);
     const formError = ref('');
     const editError = ref('');
+    const toast = ref(null);
 
     const newShop = ref({
       name: '',
@@ -123,6 +128,13 @@ export default {
       }
     };
 
+    const showToast = (message, type = 'success') => {
+      toast.value = { message, type };
+      setTimeout(() => {
+        toast.value = null;
+      }, 3000);
+    };
+
     const addShop = async () => {
       if (!newShop.value.name.trim()) {
         formError.value = '店铺名称不能为空';
@@ -137,7 +149,7 @@ export default {
         });
 
         if (response.data.success) {
-          alert('店铺添加成功');
+          showToast('店铺添加成功');
           newShop.value = { name: '', address: '' };
           showAddForm.value = false;
           await fetchShops();
@@ -158,6 +170,7 @@ export default {
         return;
       }
 
+      saving.value = true;
       try {
         editError.value = '';
         const response = await api.put(`/shops/${editingShop.value.id}`, {
@@ -166,12 +179,14 @@ export default {
         });
 
         if (response.data.success) {
-          alert('店铺信息已更新');
+          showToast('店铺信息已更新');
           editingShop.value = null;
           await fetchShops();
         }
       } catch (error) {
         editError.value = error.response?.data?.error || '更新失败';
+      } finally {
+        saving.value = false;
       }
     };
 
@@ -183,11 +198,11 @@ export default {
       try {
         const response = await api.delete(`/shops/${shopId}`);
         if (response.data.success) {
-          alert('店铺已删除');
+          showToast('店铺已删除');
           await fetchShops();
         }
       } catch (error) {
-        alert(error.response?.data?.error || '删除失败');
+        showToast(error.response?.data?.error || '删除失败', 'error');
       }
     };
 
@@ -200,14 +215,17 @@ export default {
       showAddForm,
       editingShop,
       loading,
+      saving,
       formError,
       editError,
+      toast,
       newShop,
       addShop,
       editShop,
       updateShop,
       deleteShop,
-      fetchShops
+      fetchShops,
+      showToast
     };
   }
 };
@@ -438,6 +456,42 @@ h4 {
 
 .modal-content h3 {
   margin-top: 0;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: white;
+  font-weight: bold;
+  z-index: 2000;
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast.success {
+  background: #28a745;
+}
+
+.toast.error {
+  background: #dc3545;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
