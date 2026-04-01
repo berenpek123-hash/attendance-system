@@ -14,6 +14,17 @@ db.run('PRAGMA foreign_keys=ON');
 
 // 初始化数据库
 db.serialize(() => {
+  // 创建用户表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'admin',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // 创建店铺表
   db.run(`
     CREATE TABLE IF NOT EXISTS shops (
@@ -73,6 +84,10 @@ db.serialize(() => {
       console.log('✓ 数据库已初始化');
       return;
     }
+
+    // 先初始化默认用户
+    db.run('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)',
+      ['admin', '123456', 'admin']);
 
     // 用 serialize 确保店铺先插入完成再插入员工
     db.serialize(() => {

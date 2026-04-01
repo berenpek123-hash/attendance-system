@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <nav class="navbar">
+    <nav v-if="isLoggedIn" class="navbar">
       <div class="nav-content">
         <h1 class="logo">📋 员工打卡系统</h1>
         <ul class="nav-menu">
@@ -12,6 +12,11 @@
           <li><router-link to="/shops" :class="{ active: $route.path === '/shops' }">店铺管理</router-link></li>
           <li><router-link to="/employees" :class="{ active: $route.path === '/employees' }">员工管理</router-link></li>
         </ul>
+        <div class="nav-user">
+          <span class="username">{{ username }}</span>
+          <router-link to="/settings" class="nav-link">⚙️ 设置</router-link>
+          <button @click="handleLogout" class="nav-link logout-btn">🚪 退出</button>
+        </div>
       </div>
     </nav>
     
@@ -22,14 +27,44 @@
 </template>
 
 <script>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
 export default {
   name: 'App',
-  mounted() {
-    // 检查API连接
-    fetch('http://localhost:3000/api/health')
-      .catch(err => {
-        console.error('后端服务未连接', err)
-      })
+  setup() {
+    const router = useRouter()
+    const username = ref('')
+    
+    const isLoggedIn = computed(() => {
+      return !!localStorage.getItem('token')
+    })
+
+    onMounted(() => {
+      // 获取用户信息
+      const user = localStorage.getItem('user')
+      if (user) {
+        username.value = JSON.parse(user).username
+      }
+
+      // 检查API连接
+      fetch('http://localhost:3000/api/health')
+        .catch(err => {
+          console.error('后端服务未连接', err)
+        })
+    })
+
+    const handleLogout = () => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+    }
+
+    return {
+      isLoggedIn,
+      username,
+      handleLogout
+    }
   }
 }
 </script>
@@ -71,6 +106,7 @@ export default {
   display: flex;
   list-style: none;
   gap: 2rem;
+  flex: 1;
 }
 
 .nav-menu a {
@@ -84,6 +120,42 @@ export default {
 .nav-menu a:hover,
 .nav-menu a.active {
   background: rgba(255,255,255,0.2);
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.username {
+  color: white;
+  font-size: 0.9rem;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: all 0.3s;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1rem;
+}
+
+.nav-link:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.logout-btn {
+  background: rgba(255,0,0,0.3);
+}
+
+.logout-btn:hover {
+  background: rgba(255,0,0,0.5);
 }
 
 .main-content {

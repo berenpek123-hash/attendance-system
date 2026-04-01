@@ -10,6 +10,30 @@ const api = axios.create({
   timeout: 10000
 })
 
+// 添加请求拦截器，自动带上 token
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+}, error => {
+  return Promise.reject(error)
+})
+
+// 添加响应拦截器，处理未认证
+api.interceptors.response.use(response => {
+  return response
+}, error => {
+  if (error.response?.status === 401) {
+    // token 过期或无效，清除本地数据并重定向到登陆
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.href = '/login'
+  }
+  return Promise.reject(error)
+})
+
 // 打卡相关
 export const checkin = (employeeId) => {
   return api.post('/attendance/checkin', { employeeId })

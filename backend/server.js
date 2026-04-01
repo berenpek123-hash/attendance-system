@@ -6,6 +6,7 @@ const attendanceRoutes = require('./routes/attendance');
 const employeeRoutes = require('./routes/employees');
 const reportsRoutes = require('./routes/reports');
 const shopsRoutes = require('./routes/shops');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // 路由
+app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/reports', reportsRoutes);
