@@ -20,6 +20,8 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       address TEXT,
+      check_in_time TEXT DEFAULT '09:00',
+      check_out_time TEXT DEFAULT '18:00',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);

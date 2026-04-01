@@ -51,6 +51,7 @@
           </div>
           <div class="shop-info">
             <p><strong>地址：</strong>{{ shop.address || '-' }}</p>
+            <p><strong>营业时间：</strong>{{ shop.check_in_time || '09:00' }} ~ {{ shop.check_out_time || '18:00' }}</p>
             <p><strong>员工数：</strong><span class="employee-count">{{ shop.employeeCount || 0 }}</span></p>
           </div>
         </div>
@@ -81,6 +82,22 @@
               v-model="editingShop.address" 
               type="text" 
               placeholder="请输入店铺地址"
+            >
+          </div>
+          <div class="form-group">
+            <label>上班时间</label>
+            <input 
+              v-model="editingShop.check_in_time" 
+              type="time" 
+              placeholder="09:00"
+            >
+          </div>
+          <div class="form-group">
+            <label>下班时间</label>
+            <input 
+              v-model="editingShop.check_out_time" 
+              type="time" 
+              placeholder="18:00"
             >
           </div>
           <div class="form-actions">
@@ -175,7 +192,9 @@ export default {
         editError.value = '';
         const response = await api.put(`/shops/${editingShop.value.id}`, {
           name: editingShop.value.name,
-          address: editingShop.value.address
+          address: editingShop.value.address,
+          check_in_time: editingShop.value.check_in_time || '09:00',
+          check_out_time: editingShop.value.check_out_time || '18:00'
         });
 
         if (response.data.success) {

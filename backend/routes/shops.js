@@ -77,15 +77,15 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { name, address } = req.body;
+    const { name, address, check_in_time, check_out_time } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: '店铺名称不能为空' });
     }
 
     db.run(
-      'UPDATE shops SET name = ?, address = ? WHERE id = ?',
-      [name, address || '', id],
+      'UPDATE shops SET name = ?, address = ?, check_in_time = ?, check_out_time = ? WHERE id = ?',
+      [name, address || '', check_in_time || '09:00', check_out_time || '18:00', id],
       function (err) {
         if (err) {
           if (err.message.includes('UNIQUE')) {

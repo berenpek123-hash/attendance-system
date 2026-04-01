@@ -40,79 +40,94 @@ router.post('/checkin', (req, res) => {
       const currentTimeStr = moment().format('HH:mm:ss');
 
       // 检查今天是否已有打卡记录
+      // 获取店铺的营业时间
       db.get(
-        'SELECT * FROM attendance_records WHERE employee_id = ? AND attendance_date = ?',
-        [employee.id, today],
-        (err, record) => {
+        'SELECT check_in_time, check_out_time FROM shops WHERE id = ?',
+        [employee.shop_id],
+        (err, shop) => {
           if (err) {
-            console.error('查询打卡记录错误:', err);
+            console.error('查询店铺信息错误:', err);
             return res.status(500).json({ error: '查询失败' });
           }
 
-          let checkType = 'check_in';
-          let isLate = false;
+          const shopCheckInTime = shop ? shop.check_in_time : config.workHours.checkInTime;
+          const shopCheckOutTime = shop ? shop.check_out_time : config.workHours.checkOutTime;
 
-          if (!record) {
-            // 第一次打卡 = 上班
-            checkType = 'check_in';
+          db.get(
+            'SELECT * FROM attendance_records WHERE employee_id = ? AND attendance_date = ?',
+            [employee.id, today],
+            (err, record) => {
+              if (err) {
+                console.error('查询打卡记录错误:', err);
+                return res.status(500).json({ error: '查询失败' });
+              }
 
-            // 判断是否迟到
-            const checkInTime = moment(currentTime, 'YYYY-MM-DD HH:mm:ss');
-            const workStartTime = moment(today + ' ' + config.workHours.checkInTime, 'YYYY-MM-DD HH:mm');
+              let checkType = 'check_in';
+              let isLate = false;
 
-            if (checkInTime.isAfter(workStartTime)) {
-              isLate = true;
+              if (!record) {
+                // 第一次打卡 = 上班
+                checkType = 'check_in';
+
+                // 判断是否迟到（根据店铺的营业时间）
+                const checkInTime = moment(currentTime, 'YYYY-MM-DD HH:mm:ss');
+                const workStartTime = moment(today + ' ' + shopCheckInTime, 'YYYY-MM-DD HH:mm');
+
+                if (checkInTime.isAfter(workStartTime)) {
+                  isLate = true;
+                }
+
+                // 插入新记录
+                db.run(
+                  'INSERT INTO attendance_records (employee_id, attendance_date, check_in_time, is_late) VALUES (?, ?, ?, ?)',
+                  [employee.id, today, currentTime, isLate ? 1 : 0],
+                  (err) => {
+                    if (err) {
+                      console.error('插入打卡记录错误:', err);
+                      return res.status(500).json({ error: '打卡失败' });
+                    }
+
+                    res.json({
+                      success: true,
+                      type: checkType,
+                      employeeName: employee.name,
+                      time: currentTimeStr,
+                      isLate: isLate,
+                      message: '上班打卡成功'
+                    });
+                  }
+                );
+              } else {
+                // 已有上班记录，这次是下班
+                checkType = 'check_out';
+
+                // 检查是否早退（根据店铺的营业时间）
+                const checkOutTime = moment(currentTime, 'YYYY-MM-DD HH:mm:ss');
+                const workEndTime = moment(today + ' ' + shopCheckOutTime, 'YYYY-MM-DD HH:mm');
+                const isEarlyLeave = checkOutTime.isBefore(workEndTime);
+
+                // 更新记录
+                db.run(
+                  'UPDATE attendance_records SET check_out_time = ?, is_early_leave = ? WHERE employee_id = ? AND attendance_date = ?',
+                  [currentTime, isEarlyLeave ? 1 : 0, employee.id, today],
+                  (err) => {
+                    if (err) {
+                      console.error('更新打卡记录错误:', err);
+                      return res.status(500).json({ error: '打卡失败' });
+                    }
+
+                    res.json({
+                      success: true,
+                      type: checkType,
+                      employeeName: employee.name,
+                      time: currentTimeStr,
+                      message: '下班打卡成功'
+                    });
+                  }
+                );
+              }
             }
-
-            // 插入新记录
-            db.run(
-              'INSERT INTO attendance_records (employee_id, attendance_date, check_in_time, is_late) VALUES (?, ?, ?, ?)',
-              [employee.id, today, currentTime, isLate ? 1 : 0],
-              (err) => {
-                if (err) {
-                  console.error('插入打卡记录错误:', err);
-                  return res.status(500).json({ error: '打卡失败' });
-                }
-
-                res.json({
-                  success: true,
-                  type: checkType,
-                  employeeName: employee.name,
-                  time: currentTimeStr,
-                  isLate: isLate,
-                  message: '上班打卡成功'
-                });
-              }
-            );
-          } else {
-            // 已有上班记录，这次是下班
-            checkType = 'check_out';
-
-            // 检查是否早退
-            const checkOutTime = moment(currentTime, 'YYYY-MM-DD HH:mm:ss');
-            const workEndTime = moment(today + ' ' + config.workHours.checkOutTime, 'YYYY-MM-DD HH:mm');
-            const isEarlyLeave = checkOutTime.isBefore(workEndTime);
-
-            // 更新记录
-            db.run(
-              'UPDATE attendance_records SET check_out_time = ?, is_early_leave = ? WHERE employee_id = ? AND attendance_date = ?',
-              [currentTime, isEarlyLeave ? 1 : 0, employee.id, today],
-              (err) => {
-                if (err) {
-                  console.error('更新打卡记录错误:', err);
-                  return res.status(500).json({ error: '打卡失败' });
-                }
-
-                res.json({
-                  success: true,
-                  type: checkType,
-                  employeeName: employee.name,
-                  time: currentTimeStr,
-                  message: '下班打卡成功'
-                });
-              }
-            );
-          }
+          );
         }
       );
     });
