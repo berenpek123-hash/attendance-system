@@ -166,4 +166,127 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+// 批量添加员工
+router.post('/batch/add', (req, res) => {
+  try {
+    const { employees } = req.body;
+
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({ error: '员工列表不能为空' });
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    const insertNext = (index) => {
+      if (index >= employees.length) {
+        // 全部完成
+        return res.json({
+          success: true,
+          successCount,
+          errorCount,
+          errors: errors.length > 0 ? errors : undefined,
+          message: `成功添加 ${successCount} 名员工${errorCount > 0 ? `，失败 ${errorCount} 名` : ''}`
+        });
+      }
+
+      const emp = employees[index];
+
+      // 验证必填字段
+      if (!emp.name || !emp.employee_number || !emp.shop_id) {
+        errorCount++;
+        errors.push({
+          rowIndex: index + 1,
+          name: emp.name || '未填',
+          error: '缺少必填信息（姓名、员工号、店铺）'
+        });
+        return insertNext(index + 1);
+      }
+
+      db.run(
+        'INSERT INTO employees (name, employee_number, shop_id, phone) VALUES (?, ?, ?, ?)',
+        [emp.name, emp.employee_number, emp.shop_id, emp.phone || ''],
+        function (err) {
+          if (err) {
+            errorCount++;
+            if (err.message.includes('UNIQUE')) {
+              errors.push({
+                rowIndex: index + 1,
+                name: emp.name,
+                error: `员工号 ${emp.employee_number} 已存在`
+              });
+            } else {
+              errors.push({
+                rowIndex: index + 1,
+                name: emp.name,
+                error: err.message
+              });
+            }
+          } else {
+            successCount++;
+          }
+
+          insertNext(index + 1);
+        }
+      );
+    };
+
+    insertNext(0);
+  } catch (error) {
+    console.error('批量添加员工错误:', error);
+    res.status(500).json({ error: '批量添加失败', message: error.message });
+  }
+});
+
+// 批量删除员工
+router.post('/batch/delete', (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: '需要选择至少一名员工' });
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    const deleteNext = (index) => {
+      if (index >= ids.length) {
+        return res.json({
+          success: true,
+          successCount,
+          errorCount,
+          message: `成功删除 ${successCount} 名员工${errorCount > 0 ? `，失败 ${errorCount} 名` : ''}`
+        });
+      }
+
+      const empId = ids[index];
+
+      // 先删除打卡记录
+      db.run('DELETE FROM attendance_records WHERE employee_id = ?', [empId], (err) => {
+        if (err) {
+          errorCount++;
+          return deleteNext(index + 1);
+        }
+
+        // 再删除员工
+        db.run('DELETE FROM employees WHERE id = ?', [empId], function (err2) {
+          if (err2 || this.changes === 0) {
+            errorCount++;
+          } else {
+            successCount++;
+          }
+          deleteNext(index + 1);
+        });
+      });
+    };
+
+    deleteNext(0);
+  } catch (error) {
+    console.error('批量删除员工错误:', error);
+    res.status(500).json({ error: '批量删除失败', message: error.message });
+  }
+});
+
 module.exports = router;

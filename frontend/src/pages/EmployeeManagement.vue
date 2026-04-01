@@ -17,6 +17,117 @@
         <button @click="showAddForm = !showAddForm" class="btn btn-secondary">
           {{ showAddForm ? '关闭' : '+ 添加员工' }}
         </button>
+
+        <button @click="showBatchForm = !showBatchForm" class="btn btn-info">
+          {{ showBatchForm ? '关闭' : '📊 批量操作' }}
+        </button>
+      </div>
+
+      <!-- 批量操作表单 -->
+      <div v-if="showBatchForm" class="batch-form">
+        <div class="batch-tabs">
+          <button 
+            @click="batchTab = 'add'" 
+            :class="['tab-btn', { active: batchTab === 'add' }]"
+          >
+            📥 批量导入员工
+          </button>
+          <button 
+            @click="batchTab = 'delete'" 
+            :class="['tab-btn', { active: batchTab === 'delete' }]"
+          >
+            🗑️ 批量删除员工
+          </button>
+        </div>
+
+        <!-- 批量添加 -->
+        <div v-if="batchTab === 'add'" class="batch-content">
+          <h3>批量导入员工</h3>
+          <p class="help-text">支持两种方式：上传 CSV 文件或粘贴 Excel 数据</p>
+
+          <!-- CSV 上传 -->
+          <div class="upload-area">
+            <input 
+              type="file" 
+              accept=".csv,.xls,.xlsx" 
+              @change="handleFileUpload"
+              ref="fileInput"
+            >
+            <p>选择 CSV 文件（格式：姓名,员工号,店铺ID,电话）</p>
+          </div>
+
+          <!-- 或者手动粘贴 -->
+          <div class="paste-area">
+            <p><strong>或直接粘贴 Excel 数据：</strong></p>
+            <textarea 
+              v-model="batchPasteData"
+              placeholder="将 Excel 复制粘贴到这里&#10;格式（无需表头）：&#10;张三	EMP031	1	13800001234&#10;李四	EMP032	2	13800001235"
+              rows="6"
+            ></textarea>
+            <button @click="parsePasteData" class="btn btn-primary">解析数据</button>
+          </div>
+
+          <!-- 预览 -->
+          <div v-if="batchPreview.length > 0" class="preview">
+            <h4>预览 ({{ batchPreview.length }} 条)</h4>
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>员工号</th>
+                  <th>店铺 ID</th>
+                  <th>电话</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, idx) in batchPreview.slice(0, 10)" :key="idx">
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.employee_number }}</td>
+                  <td>{{ item.shop_id }}</td>
+                  <td>{{ item.phone || '-' }}</td>
+                </tr>
+                <tr v-if="batchPreview.length > 10">
+                  <td colspan="4" class="more">... 还有 {{ batchPreview.length - 10 }} 条</td>
+                </tr>
+              </tbody>
+            </table>
+            <button @click="submitBatchAdd" class="btn btn-success">导入这些员工</button>
+            <button @click="batchPreview = []; batchPasteData = ''" class="btn btn-cancel">取消</button>
+          </div>
+        </div>
+
+        <!-- 批量删除 -->
+        <div v-if="batchTab === 'delete'" class="batch-content">
+          <h3>批量删除员工</h3>
+          <p class="warning-text">⚠️ 删除后无法恢复，请谨慎操作</p>
+
+          <div class="delete-options">
+            <div class="option">
+              <input type="checkbox" id="selectAll" v-model="selectAllDelete" @change="toggleSelectAll">
+              <label for="selectAll">全选 {{ filteredEmployees.length }} 名员工</label>
+            </div>
+          </div>
+
+          <div v-if="filteredEmployees.length > 0" class="employee-list">
+            <div v-for="(emp, idx) in filteredEmployees" :key="emp.id" class="employee-item">
+              <input 
+                type="checkbox" 
+                :id="'emp-' + emp.id" 
+                v-model="selectedForDelete"
+                :value="emp.id"
+              >
+              <label :for="'emp-' + emp.id">
+                {{ emp.name }} ({{ emp.employee_number }}) - {{ emp.shop_name }}
+              </label>
+            </div>
+          </div>
+
+          <div v-if="selectedForDelete.length > 0" class="action-buttons">
+            <p class="selected-count">已选择 {{ selectedForDelete.length }} 名员工</p>
+            <button @click="submitBatchDelete" class="btn btn-danger">确认删除</button>
+            <button @click="selectedForDelete = []" class="btn btn-cancel">取消</button>
+          </div>
+        </div>
       </div>
 
       <!-- 添加员工表单 -->
@@ -126,8 +237,15 @@ export default {
     const shops = ref([])
     const selectedShopId = ref('')
     const showAddForm = ref(false)
+    const showBatchForm = ref(false)
+    const batchTab = ref('add')
     const searchText = ref('')
     const qrModalEmployee = ref(null)
+    const batchPasteData = ref('')
+    const batchPreview = ref([])
+    const selectedForDelete = ref([])
+    const selectAllDelete = ref(false)
+    const fileInput = ref(null)
     
     const newEmployee = ref({
       name: '',
@@ -259,6 +377,123 @@ export default {
       }, 100)
     }
 
+    const handleFileUpload = (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target.result
+        const lines = content.split('\n').filter(line => line.trim())
+        
+        batchPreview.value = lines.map((line, idx) => {
+          const parts = line.split(/[,\t]/).map(p => p.trim())
+          return {
+            name: parts[0] || '',
+            employee_number: parts[1] || '',
+            shop_id: parseInt(parts[2]) || 1,
+            phone: parts[3] || ''
+          }
+        }).filter(item => item.name && item.employee_number)
+      }
+      reader.readAsText(file)
+    }
+
+    const parsePasteData = () => {
+      if (!batchPasteData.value.trim()) {
+        alert('请粘贴数据')
+        return
+      }
+
+      const lines = batchPasteData.value.split('\n').filter(line => line.trim())
+      
+      batchPreview.value = lines.map((line, idx) => {
+        const parts = line.split(/[\t,]/).map(p => p.trim())
+        return {
+          name: parts[0] || '',
+          employee_number: parts[1] || '',
+          shop_id: parseInt(parts[2]) || 1,
+          phone: parts[3] || ''
+        }
+      }).filter(item => item.name && item.employee_number)
+
+      if (batchPreview.value.length === 0) {
+        alert('没有找到有效的数据行')
+      }
+    }
+
+    const submitBatchAdd = async () => {
+      if (batchPreview.value.length === 0) {
+        alert('没有数据可导入')
+        return
+      }
+
+      if (!confirm(`确定导入 ${batchPreview.value.length} 名员工吗？`)) {
+        return
+      }
+
+      try {
+        const response = await api.post('/employees/batch/add', {
+          employees: batchPreview.value
+        })
+
+        const result = response.data
+        let message = `导入完成：成功 ${result.successCount} 名`
+        if (result.errorCount > 0) {
+          message += `，失败 ${result.errorCount} 名`
+          if (result.errors) {
+            message += '\n\n失败详情：\n'
+            result.errors.forEach(err => {
+              message += `第 ${err.rowIndex} 行 (${err.name}): ${err.error}\n`
+            })
+          }
+        }
+        
+        alert(message)
+        batchPreview.value = []
+        batchPasteData.value = ''
+        showBatchForm.value = false
+        loadEmployees()
+      } catch (error) {
+        alert('导入失败: ' + (error.response?.data?.error || error.message))
+      }
+    }
+
+    const toggleSelectAll = () => {
+      if (selectAllDelete.value) {
+        selectedForDelete.value = filteredEmployees.value.map(emp => emp.id)
+      } else {
+        selectedForDelete.value = []
+      }
+    }
+
+    const submitBatchDelete = async () => {
+      if (selectedForDelete.value.length === 0) {
+        alert('请选择要删除的员工')
+        return
+      }
+
+      if (!confirm(`确定永久删除 ${selectedForDelete.value.length} 名员工及其所有打卡记录吗？此操作无法恢复！`)) {
+        return
+      }
+
+      try {
+        const response = await api.post('/employees/batch/delete', {
+          ids: selectedForDelete.value
+        })
+
+        const result = response.data
+        alert(`删除完成：成功 ${result.successCount} 名${result.errorCount > 0 ? `，失败 ${result.errorCount} 名` : ''}`)
+        
+        selectedForDelete.value = []
+        selectAllDelete.value = false
+        showBatchForm.value = false
+        loadEmployees()
+      } catch (error) {
+        alert('删除失败: ' + (error.response?.data?.error || error.message))
+      }
+    }
+
     onMounted(() => {
       loadShops()
       loadEmployees()
@@ -278,7 +513,19 @@ export default {
       addEmployee,
       deactivateEmployee,
       deleteEmployee,
-      generateQRCode
+      generateQRCode,
+      handleFileUpload,
+      parsePasteData,
+      submitBatchAdd,
+      toggleSelectAll,
+      submitBatchDelete,
+      batchTab,
+      showBatchForm,
+      batchPasteData,
+      batchPreview,
+      selectedForDelete,
+      selectAllDelete,
+      fileInput
     }
   }
 }
@@ -348,6 +595,15 @@ h2 {
 
 .btn-secondary:hover {
   background: #e0e0e0;
+}
+
+.btn-info {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background: #138496;
 }
 
 .btn-danger {
@@ -509,6 +765,217 @@ h2 {
 #qr-code-container {
   text-align: center;
   margin: 1.5rem 0;
+}
+
+.batch-form {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 4px;
+  margin-bottom: 2rem;
+  border: 1px solid #ddd;
+}
+
+.batch-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #ddd;
+}
+
+.tab-btn {
+  padding: 0.8rem 1.2rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.3s;
+}
+
+.tab-btn.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.tab-btn:hover {
+  color: #333;
+}
+
+.batch-content {
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.batch-content h3 {
+  margin-top: 0;
+}
+
+.help-text {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.warning-text {
+  color: #dc3545;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.upload-area {
+  border: 2px dashed #ddd;
+  padding: 2rem;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-area:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.upload-area input {
+  display: none;
+}
+
+.upload-area p {
+  color: #666;
+  margin: 0.5rem 0 0 0;
+  cursor: pointer;
+}
+
+.paste-area {
+  margin-bottom: 1.5rem;
+}
+
+.paste-area textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.preview {
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-top: 1.5rem;
+  border: 1px solid #ddd;
+}
+
+.preview h4 {
+  margin-top: 0;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.preview-table th {
+  background: #f5f5f5;
+  padding: 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  font-weight: bold;
+}
+
+.preview-table td {
+  padding: 0.6rem;
+  border-bottom: 1px solid #eee;
+}
+
+.preview-table .more {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+.delete-options {
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.delete-options .option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.delete-options input {
+  cursor: pointer;
+}
+
+.delete-options label {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.employee-list {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.employee-item {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.employee-item:last-child {
+  border-bottom: none;
+}
+
+.employee-item input {
+  cursor: pointer;
+}
+
+.employee-item label {
+  cursor: pointer;
+  flex: 1;
+  margin: 0;
+}
+
+.employee-item:hover {
+  background: #f9f9f9;
+}
+
+.action-buttons {
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.selected-count {
+  margin: 0 0 1rem 0;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.action-buttons .btn {
+  margin-right: 0.5rem;
 }
 
 @media (max-width: 768px) {
