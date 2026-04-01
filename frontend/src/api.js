@@ -1,17 +1,7 @@
 import axios from 'axios'
 
-// 自动检测环境
-const getAPIBase = () => {
-  if (import.meta.env.PROD) {
-    // 生产环境：使用 Render 后端 URL
-    return 'https://attendance-system-backend-dmgp.onrender.com/api'
-  } else {
-    // 开发环境：使用本地代理
-    return '/api'
-  }
-}
-
-const API_BASE = getAPIBase()
+// API 基础路径：统一使用 /api（Nginx 反向代理到后端）
+const API_BASE = '/api'
 
 const api = axios.create({
   baseURL: API_BASE,
