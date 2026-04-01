@@ -10,12 +10,19 @@ const api = axios.create({
   timeout: 10000
 })
 
-// 添加请求拦截器，自动带上 token
+// 添加请求拦截器
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
-  if (token) {
+  
+  // 打卡 API 不需要 token
+  const publicEndpoints = ['/attendance/checkin', '/attendance/status']
+  const isPublic = publicEndpoints.some(endpoint => config.url.includes(endpoint))
+  
+  // 其他 API 需要 token
+  if (token && !isPublic) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  
   return config
 }, error => {
   return Promise.reject(error)

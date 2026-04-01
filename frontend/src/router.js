@@ -11,8 +11,8 @@ import Settings from './pages/Settings.vue'
 
 const routes = [
   { path: '/login', component: Login, meta: { title: '登陆', requiresAuth: false } },
+  { path: '/checkin', component: Checkin, meta: { title: '员工打卡', requiresAuth: false } },
   { path: '/', component: Dashboard, meta: { title: '仪表盘', requiresAuth: true } },
-  { path: '/checkin', component: Checkin, meta: { title: '员工打卡', requiresAuth: true } },
   { path: '/daily-report', component: DailyReport, meta: { title: '日报', requiresAuth: true } },
   { path: '/monthly-report', component: MonthlyReport, meta: { title: '月报', requiresAuth: true } },
   { path: '/work-hours', component: WorkHoursReport, meta: { title: '工作时长', requiresAuth: true } },
