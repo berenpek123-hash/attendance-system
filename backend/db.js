@@ -74,30 +74,36 @@ db.serialize(() => {
       return;
     }
 
-    // 插入店铺
-    db.run('INSERT INTO shops (name, address) VALUES (?, ?)', ['南京店', '南京市鼓楼区']);
-    db.run('INSERT INTO shops (name, address) VALUES (?, ?)', ['北京店', '北京市朝阳区']);
+    // 用 serialize 确保店铺先插入完成再插入员工
+    db.serialize(() => {
+      // 先插入店铺
+      db.run('INSERT INTO shops (name, address, check_in_time, check_out_time) VALUES (?, ?, ?, ?)', 
+        ['店铺1', '', '09:00', '18:00']);
+      db.run('INSERT INTO shops (name, address, check_in_time, check_out_time) VALUES (?, ?, ?, ?)', 
+        ['店铺2', '', '09:00', '18:00']);
 
-    const names = ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十',
-                   '冯一', '陈二', '褚三', '卫四', '蒋五', '沈六', '韩七'];
+      // 再插入员工（此时店铺已存在，外键不会报错）
+      const names = ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十',
+                     '冯一', '陈二', '褚三', '卫四', '蒋五', '沈六', '韩七'];
 
-    // 南京店 EMP001-EMP015
-    for (let i = 1; i <= 15; i++) {
-      db.run(
-        'INSERT INTO employees (employee_number, name, phone, shop_id) VALUES (?, ?, ?, ?)',
-        [`EMP${String(i).padStart(3, '0')}`, names[i - 1], `1380000${String(i).padStart(4, '0')}`, 1]
-      );
-    }
+      // 店铺1 EMP001-EMP015
+      for (let i = 1; i <= 15; i++) {
+        db.run(
+          'INSERT INTO employees (employee_number, name, phone, shop_id) VALUES (?, ?, ?, ?)',
+          [`EMP${String(i).padStart(3, '0')}`, names[i - 1], `1380000${String(i).padStart(4, '0')}`, 1]
+        );
+      }
 
-    // 北京店 EMP016-EMP030
-    for (let i = 16; i <= 30; i++) {
-      db.run(
-        'INSERT INTO employees (employee_number, name, phone, shop_id) VALUES (?, ?, ?, ?)',
-        [`EMP${String(i).padStart(3, '0')}`, names[i - 16], `1390000${String(i).padStart(4, '0')}`, 2]
-      );
-    }
+      // 店铺2 EMP016-EMP030
+      for (let i = 16; i <= 30; i++) {
+        db.run(
+          'INSERT INTO employees (employee_number, name, phone, shop_id) VALUES (?, ?, ?, ?)',
+          [`EMP${String(i).padStart(3, '0')}`, names[i - 16], `1390000${String(i).padStart(4, '0')}`, 2]
+        );
+      }
 
-    console.log('✓ 示例数据初始化完成（30名员工）');
+      console.log('✓ 示例数据初始化完成（30名员工）');
+    });
   });
 });
 
