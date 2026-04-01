@@ -18,8 +18,8 @@
         <input type="month" v-model="selectedMonth" @change="fetchData">
       </div>
 
-      <button @click="fetchData" class="btn-primary">查询</button>
-      <button @click="exportExcel" class="btn-secondary">导出 Excel</button>
+      <button @click="fetchData" class="btn-primary" :disabled="loading">{{ loading ? '加载中...' : '查询' }}</button>
+      <button @click="exportExcel" class="btn-secondary" :disabled="loading">导出 Excel</button>
     </div>
 
     <!-- 今日工作时长 -->
@@ -281,8 +281,14 @@ h3 {
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #0052a3;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
