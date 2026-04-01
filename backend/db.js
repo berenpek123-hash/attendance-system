@@ -55,6 +55,18 @@ db.serialize(() => {
     )
   `);
 
+  // 给已有的 shops 表添加营业时间字段（如果还没有）
+  db.all("PRAGMA table_info(shops)", (err, columns) => {
+    if (err) return;
+    const columnNames = (columns || []).map(c => c.name);
+    if (!columnNames.includes('check_in_time')) {
+      db.run("ALTER TABLE shops ADD COLUMN check_in_time TEXT DEFAULT '09:00'");
+    }
+    if (!columnNames.includes('check_out_time')) {
+      db.run("ALTER TABLE shops ADD COLUMN check_out_time TEXT DEFAULT '18:00'");
+    }
+  });
+
   // 检查是否需要初始化示例数据
   db.get('SELECT COUNT(*) as count FROM shops', (err, row) => {
     if (err || (row && row.count > 0)) {
