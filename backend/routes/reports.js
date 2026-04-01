@@ -307,15 +307,15 @@ router.get('/work-hours', (req, res) => {
 
       // 转换为数组并计算平均值
       const stats = Object.values(employeeStats).map(emp => {
-        const avgHours = emp.totalDays > 0 ? emp.totalMinutes / emp.totalDays : 0;
-        const avgHoursInt = Math.floor(avgHours);
-        const avgMinutesInt = Math.floor(avgHours % 1 * 60);
+        const avgMinutes = emp.totalDays > 0 ? emp.totalMinutes / emp.totalDays : 0;
+        const avgHoursInt = Math.floor(avgMinutes / 60);
+        const avgMinutesInt = Math.floor(avgMinutes % 60);
 
         return {
           ...emp,
           avgDailyHours: `${avgHoursInt}小时${avgMinutesInt}分钟`,
           totalHoursDisplay: `${Math.floor(emp.totalMinutes / 60)}小时${emp.totalMinutes % 60}分钟`,
-          avgDailyMinutes: avgHours * 60
+          avgDailyMinutes: avgMinutes
         };
       });
 
