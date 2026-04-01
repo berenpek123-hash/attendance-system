@@ -88,33 +88,41 @@ export default {
 }
 
 .nav-content {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 2rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
 }
 
 .logo {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: bold;
   margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-menu {
   display: flex;
   list-style: none;
-  gap: 2rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   flex: 1;
+  min-width: 0;
 }
 
 .nav-menu a {
   color: white;
   text-decoration: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 4px;
   transition: all 0.3s;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .nav-menu a:hover,
@@ -125,25 +133,30 @@ export default {
 .nav-user {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-left: auto;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .username {
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .nav-link {
   color: white;
   text-decoration: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 4px;
   transition: all 0.3s;
   cursor: pointer;
   background: none;
   border: none;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -166,15 +179,38 @@ export default {
   padding: 0 2rem;
 }
 
+@media (max-width: 1024px) {
+  .nav-menu a {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .nav-link {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .username {
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 768px) {
   .nav-content {
     flex-direction: column;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
   
   .nav-menu {
-    gap: 1rem;
-    font-size: 0.9rem;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    width: 100%;
+  }
+  
+  .nav-user {
+    justify-content: flex-start;
+    width: 100%;
   }
 }
 </style>
