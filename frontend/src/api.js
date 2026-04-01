@@ -1,9 +1,17 @@
 import axios from 'axios'
 
-// 自动检测环境：本地开发用 localhost:3000，云端用 Render 后端
-const API_BASE = import.meta.env.PROD
-  ? 'https://attendance-system-ngtj.onrender.com/api' 
-  : 'http://localhost:3000/api'
+// 自动检测环境
+const getAPIBase = () => {
+  if (import.meta.env.PROD) {
+    // 生产环境：使用当前页面的主机名
+    return `${window.location.protocol}//${window.location.hostname}:3000/api`
+  } else {
+    // 开发环境：使用本地代理
+    return '/api'
+  }
+}
+
+const API_BASE = getAPIBase()
 
 const api = axios.create({
   baseURL: API_BASE,
