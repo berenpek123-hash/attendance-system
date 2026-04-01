@@ -189,4 +189,219 @@ router.get('/employee/:employeeId', (req, res) => {
   }
 });
 
+// 计算工作时长（时:分）
+function calculateWorkHours(checkInTime, checkOutTime) {
+  if (!checkInTime || !checkOutTime) {
+    return null;
+  }
+  
+  const checkIn = moment(checkInTime, 'YYYY-MM-DD HH:mm:ss');
+  const checkOut = moment(checkOutTime, 'YYYY-MM-DD HH:mm:ss');
+  
+  if (!checkIn.isValid() || !checkOut.isValid()) {
+    return null;
+  }
+  
+  const durationMs = checkOut.diff(checkIn);
+  const hours = Math.floor(durationMs / (1000 * 60 * 60));
+  const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  return {
+    hours,
+    minutes,
+    display: `${hours}小时${minutes}分钟`,
+    totalMinutes: hours * 60 + minutes
+  };
+}
+
+// 获取员工工作时长统计（按日期范围）
+router.get('/work-hours', (req, res) => {
+  try {
+    const { shopId, month } = req.query;
+    const targetMonth = month ? moment(month).format('YYYY-MM') : moment().format('YYYY-MM');
+    const monthStart = targetMonth + '-01';
+    const monthEnd = moment(monthStart).endOf('month').format('YYYY-MM-DD');
+
+    let query = `
+      SELECT 
+        e.id,
+        e.name,
+        e.employee_number,
+        s.name as shop_name,
+        e.shop_id,
+        ar.attendance_date,
+        ar.check_in_time,
+        ar.check_out_time,
+        ar.is_late,
+        ar.is_early_leave
+      FROM employees e
+      LEFT JOIN shops s ON e.shop_id = s.id
+      LEFT JOIN attendance_records ar ON e.id = ar.employee_id 
+        AND ar.attendance_date BETWEEN ? AND ?
+      WHERE e.status = 'active'
+    `;
+
+    const params = [monthStart, monthEnd];
+
+    if (shopId) {
+      query += ' AND e.shop_id = ?';
+      params.push(shopId);
+    }
+
+    query += ' ORDER BY e.shop_id, e.id, ar.attendance_date DESC';
+
+    db.all(query, params, (err, records) => {
+      if (err) {
+        console.error('工作时长统计错误:', err);
+        return res.status(500).json({ error: '获取工作时长统计失败' });
+      }
+
+      records = records || [];
+
+      // 按员工分组并计算统计
+      const employeeStats = {};
+
+      records.forEach(record => {
+        if (!employeeStats[record.id]) {
+          employeeStats[record.id] = {
+            employeeId: record.id,
+            name: record.name,
+            employeeNumber: record.employee_number,
+            shopId: record.shop_id,
+            shopName: record.shop_name,
+            totalDays: 0,
+            totalMinutes: 0,
+            totalHours: 0,
+            lateDays: 0,
+            earlyLeaveDays: 0,
+            details: []
+          };
+        }
+
+        if (record.attendance_date) {
+          const workHours = calculateWorkHours(record.check_in_time, record.check_out_time);
+          
+          if (workHours) {
+            employeeStats[record.id].totalDays += 1;
+            employeeStats[record.id].totalMinutes += workHours.totalMinutes;
+          }
+
+          if (record.is_late) {
+            employeeStats[record.id].lateDays += 1;
+          }
+
+          if (record.is_early_leave) {
+            employeeStats[record.id].earlyLeaveDays += 1;
+          }
+
+          employeeStats[record.id].details.push({
+            date: record.attendance_date,
+            checkInTime: record.check_in_time ? record.check_in_time.split(' ')[1] : '-',
+            checkOutTime: record.check_out_time ? record.check_out_time.split(' ')[1] : '-',
+            workHours: workHours ? workHours.display : '无记录',
+            isLate: !!record.is_late,
+            isEarlyLeave: !!record.is_early_leave
+          });
+        }
+      });
+
+      // 转换为数组并计算平均值
+      const stats = Object.values(employeeStats).map(emp => {
+        const avgHours = emp.totalDays > 0 ? emp.totalMinutes / emp.totalDays : 0;
+        const avgHoursInt = Math.floor(avgHours);
+        const avgMinutesInt = Math.floor(avgHours % 1 * 60);
+
+        return {
+          ...emp,
+          avgDailyHours: `${avgHoursInt}小时${avgMinutesInt}分钟`,
+          totalHoursDisplay: `${Math.floor(emp.totalMinutes / 60)}小时${emp.totalMinutes % 60}分钟`,
+          avgDailyMinutes: avgHours * 60
+        };
+      });
+
+      res.json({
+        month: targetMonth,
+        monthStart,
+        monthEnd,
+        stats: stats.sort((a, b) => a.shopId - b.shopId || a.employeeId - b.employeeId)
+      });
+    });
+
+  } catch (error) {
+    console.error('工作时长统计错误:', error);
+    res.status(500).json({ error: '获取工作时长统计失败' });
+  }
+});
+
+// 获取员工今日工作时长
+router.get('/work-hours/today', (req, res) => {
+  try {
+    const { shopId } = req.query;
+    const today = moment().format('YYYY-MM-DD');
+
+    let query = `
+      SELECT 
+        e.id,
+        e.name,
+        e.employee_number,
+        s.name as shop_name,
+        e.shop_id,
+        ar.check_in_time,
+        ar.check_out_time,
+        ar.is_late,
+        ar.is_early_leave
+      FROM employees e
+      LEFT JOIN shops s ON e.shop_id = s.id
+      LEFT JOIN attendance_records ar ON e.id = ar.employee_id 
+        AND ar.attendance_date = ?
+      WHERE e.status = 'active'
+    `;
+
+    const params = [today];
+
+    if (shopId) {
+      query += ' AND e.shop_id = ?';
+      params.push(shopId);
+    }
+
+    query += ' ORDER BY e.shop_id, e.id';
+
+    db.all(query, params, (err, records) => {
+      if (err) {
+        console.error('今日工作时长错误:', err);
+        return res.status(500).json({ error: '获取今日工作时长失败' });
+      }
+
+      records = records || [];
+
+      const stats = records.map(record => {
+        const workHours = calculateWorkHours(record.check_in_time, record.check_out_time);
+        
+        return {
+          employeeId: record.id,
+          name: record.name,
+          employeeNumber: record.employee_number,
+          shopId: record.shop_id,
+          shopName: record.shop_name,
+          checkInTime: record.check_in_time ? record.check_in_time.split(' ')[1] : '-',
+          checkOutTime: record.check_out_time ? record.check_out_time.split(' ')[1] : '-',
+          workHours: workHours ? workHours.display : (record.check_in_time ? '已上班，未下班' : '未打卡'),
+          isLate: !!record.is_late,
+          isEarlyLeave: !!record.is_early_leave,
+          status: !record.check_in_time ? '未打卡' : (!record.check_out_time ? '已上班' : '已完成')
+        };
+      });
+
+      res.json({
+        date: today,
+        stats: stats.sort((a, b) => a.shopId - b.shopId || a.employeeId - b.employeeId)
+      });
+    });
+
+  } catch (error) {
+    console.error('今日工作时长错误:', error);
+    res.status(500).json({ error: '获取今日工作时长失败' });
+  }
+});
+
 module.exports = router;

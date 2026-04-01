@@ -61,4 +61,13 @@ export const getEmployeeStats = (employeeId, month) => {
   return api.get(`/reports/employee/${employeeId}`, { params })
 }
 
+// 工作时长相关
+export const getTodayWorkHours = (params = {}) => {
+  return api.get('/reports/work-hours/today', { params })
+}
+
+export const getMonthlyWorkHours = (params = {}) => {
+  return api.get('/reports/work-hours', { params })
+}
+
 export default api
