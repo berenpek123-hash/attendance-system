@@ -227,7 +227,7 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { getEmployees, addEmployee as apiAddEmployee, updateEmployee as apiUpdateEmployee, deleteEmployee as apiDeleteEmployee, getShops } from '../api'
+import api, { getEmployees, addEmployee as apiAddEmployee, updateEmployee as apiUpdateEmployee, deleteEmployee as apiDeleteEmployee, getShops } from '../api'
 
 export default {
   name: 'EmployeeManagement',
