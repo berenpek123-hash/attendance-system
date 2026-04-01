@@ -159,4 +159,51 @@ router.get('/me', (req, res) => {
   }
 });
 
+// 忘记密码
+router.post('/forgot-password', (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: '请输入用户名' });
+    }
+
+    db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
+      if (err) {
+        console.error('查询用户错误:', err);
+        return res.status(500).json({ error: '操作失败' });
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: '用户不存在' });
+      }
+
+      // 生成随机临时密码（8位）
+      const tempPassword = Math.random().toString(36).substring(2, 10);
+
+      // 更新数据库中的密码
+      db.run(
+        'UPDATE users SET password = ? WHERE username = ?',
+        [tempPassword, username],
+        function(err) {
+          if (err) {
+            console.error('更新密码错误:', err);
+            return res.status(500).json({ error: '重置失败' });
+          }
+
+          res.json({
+            success: true,
+            message: '密码已重置，请使用临时密码登陆',
+            tempPassword: tempPassword,
+            tip: '登陆后请立即修改密码'
+          });
+        }
+      );
+    });
+  } catch (error) {
+    console.error('忘记密码错误:', error);
+    res.status(500).json({ error: '操作失败' });
+  }
+});
+
 module.exports = router;

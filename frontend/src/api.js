@@ -105,4 +105,17 @@ export const getMonthlyWorkHours = (params = {}) => {
   return api.get('/reports/work-hours', { params })
 }
 
+// 认证相关
+export const login = (username, password) => {
+  return api.post('/auth/login', { username, password })
+}
+
+export const forgotPassword = (username) => {
+  return api.post('/auth/forgot-password', { username })
+}
+
+export const changePassword = (oldPassword, newPassword) => {
+  return api.post('/auth/change-password', { oldPassword, newPassword })
+}
+
 export default api

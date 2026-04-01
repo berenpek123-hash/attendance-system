@@ -2,9 +2,10 @@
   <div class="login-container">
     <div class="login-box">
       <h1>👥 员工打卡系统</h1>
-      <p class="subtitle">登陆管理系统</p>
+      <p class="subtitle">{{ showForgot ? '重置密码' : '登陆管理系统' }}</p>
 
-      <form @submit.prevent="handleLogin">
+      <!-- 登陆界面 -->
+      <form v-if="!showForgot" @submit.prevent="handleLogin">
         <div class="form-group">
           <label>用户名</label>
           <input 
@@ -29,14 +30,57 @@
         <button type="submit" class="btn-login" :disabled="loading">
           {{ loading ? '登陆中...' : '登陆' }}
         </button>
+
+        <div class="forgot-link">
+          <button type="button" @click="showForgot = true; error = ''" class="link-btn">
+            忘记密码？
+          </button>
+        </div>
       </form>
 
-      <p v-if="error" class="error-message">{{ error }}</p>
+      <!-- 忘记密码界面 -->
+      <div v-else>
+        <form v-if="!tempPassword" @submit.prevent="handleForgotPassword">
+          <div class="form-group">
+            <label>用户名</label>
+            <input 
+              v-model="forgotUsername" 
+              type="text" 
+              placeholder="输入你的用户名"
+              autofocus
+            >
+          </div>
 
-      <div class="help-text">
-        <p>默认账号: <strong>admin</strong></p>
-        <p>默认密码: <strong>123456</strong></p>
+          <button type="submit" class="btn-login" :disabled="loading">
+            {{ loading ? '重置中...' : '重置密码' }}
+          </button>
+
+          <div class="forgot-link">
+            <button type="button" @click="backToLogin" class="link-btn">
+              ← 返回登陆
+            </button>
+          </div>
+        </form>
+
+        <!-- 临时密码显示 -->
+        <div v-if="tempPassword" class="temp-password-box">
+          <div class="success-icon">✅</div>
+          <h3>密码已重置</h3>
+          <p>您的临时密码是：</p>
+          <div class="password-display">
+            <code>{{ tempPassword }}</code>
+            <button type="button" @click="copyPassword" class="btn-copy">
+              {{ copied ? '已复制 ✓' : '复制' }}
+            </button>
+          </div>
+          <p class="warning">⚠️ 请用此密码登陆后立即修改密码</p>
+          <button type="button" @click="backToLogin" class="btn-login">
+            去登陆
+          </button>
+        </div>
       </div>
+
+      <p v-if="error" class="error-message">{{ error }}</p>
     </div>
   </div>
 </template>
@@ -54,6 +98,10 @@ export default {
     const password = ref('');
     const error = ref('');
     const loading = ref(false);
+    const showForgot = ref(false);
+    const forgotUsername = ref('');
+    const tempPassword = ref('');
+    const copied = ref(false);
 
     const handleLogin = async () => {
       error.value = '';
@@ -78,19 +126,66 @@ export default {
         });
 
         if (response.data.success) {
-          // 保存 token
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('user', JSON.stringify(response.data.user));
-          
-          // 跳转到首页
           router.push('/');
         }
       } catch (err) {
         error.value = err.response?.data?.error || '登陆失败，请检查用户名和密码';
-        console.error('登陆错误:', err);
       } finally {
         loading.value = false;
       }
+    };
+
+    const handleForgotPassword = async () => {
+      error.value = '';
+      loading.value = true;
+
+      if (!forgotUsername.value.trim()) {
+        error.value = '请输入用户名';
+        loading.value = false;
+        return;
+      }
+
+      try {
+        const response = await api.post('/auth/forgot-password', {
+          username: forgotUsername.value
+        });
+
+        if (response.data.success) {
+          tempPassword.value = response.data.tempPassword;
+        }
+      } catch (err) {
+        error.value = err.response?.data?.error || '重置失败';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const copyPassword = async () => {
+      try {
+        await navigator.clipboard.writeText(tempPassword.value);
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+      } catch {
+        // 备用方案
+        const input = document.createElement('input');
+        input.value = tempPassword.value;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        copied.value = true;
+        setTimeout(() => { copied.value = false; }, 2000);
+      }
+    };
+
+    const backToLogin = () => {
+      showForgot.value = false;
+      tempPassword.value = '';
+      forgotUsername.value = '';
+      error.value = '';
+      copied.value = false;
     };
 
     return {
@@ -98,7 +193,14 @@ export default {
       password,
       error,
       loading,
-      handleLogin
+      showForgot,
+      forgotUsername,
+      tempPassword,
+      copied,
+      handleLogin,
+      handleForgotPassword,
+      copyPassword,
+      backToLogin
     };
   }
 };
@@ -188,6 +290,90 @@ h1 {
   cursor: not-allowed;
 }
 
+.forgot-link {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 5px;
+  text-decoration: underline;
+}
+
+.link-btn:hover {
+  color: #764ba2;
+}
+
+.temp-password-box {
+  text-align: center;
+}
+
+.success-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.temp-password-box h3 {
+  color: #2e7d32;
+  margin: 0 0 15px 0;
+  font-size: 20px;
+}
+
+.temp-password-box p {
+  color: #666;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.password-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 15px 0;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border: 2px dashed #667eea;
+}
+
+.password-display code {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  letter-spacing: 2px;
+  font-family: 'Courier New', monospace;
+}
+
+.btn-copy {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: background 0.3s;
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: #5a6fd6;
+}
+
+.warning {
+  color: #e65100 !important;
+  font-weight: bold;
+  font-size: 13px !important;
+  margin: 15px 0 20px 0 !important;
+}
+
 .error-message {
   margin-top: 15px;
   padding: 12px;
@@ -198,22 +384,6 @@ h1 {
   text-align: center;
 }
 
-.help-text {
-  margin-top: 25px;
-  padding-top: 25px;
-  border-top: 1px solid #eee;
-  font-size: 13px;
-  color: #666;
-}
-
-.help-text p {
-  margin: 5px 0;
-}
-
-.help-text strong {
-  color: #333;
-}
-
 @media (max-width: 600px) {
   .login-box {
     padding: 30px 20px;
@@ -222,6 +392,10 @@ h1 {
 
   h1 {
     font-size: 24px;
+  }
+
+  .password-display code {
+    font-size: 20px;
   }
 }
 </style>
